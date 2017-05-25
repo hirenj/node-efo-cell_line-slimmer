@@ -1,0 +1,5 @@
+cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://www.obofoundry.org/ro/ro.owl#derives_from']/rdfs:label/text()"
+
+cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://purl.org/obo/owl/OBO_REL#bearer_of']/rdfs:label/text()"
+
+cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://www.ebi.ac.uk/efo/EFO_0000784']/rdfs:label/text()"
