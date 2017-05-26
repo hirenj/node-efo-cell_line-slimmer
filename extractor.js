@@ -9,16 +9,15 @@ const PassThrough = require('stream').PassThrough;
 const StreamCombiner = function(input,output) {
   this.output = output;
   this.on('pipe', function(source) {
-    console.log("Redirecting input pipe");
     source.unpipe(this);
     source.pipe(input);
   });
+  this.on('end', () => console.log("Ended combiner"));
 };
 
 util.inherits(StreamCombiner, PassThrough);
 
 StreamCombiner.prototype.pipe = function(dest, options) {
-  console.log("Redirecting output");
   return this.output.pipe(dest, options);
 };
 
@@ -29,9 +28,6 @@ const restrictions = [
   'http://purl.org/obo/owl/OBO_REL#bearer_of',
   'http://www.ebi.ac.uk/efo/EFO_0000784'
 ];
-
-//  'derives_from' : './rdfs:subClassOf/owl:Restriction[ owl:onProperty/@rdf:resource = \'http://www.obofoundry.org/ro/ro.owl#derives_from\' ]//rdf:Description[starts-with(@rdf:about,\'http://purl.obolibrary.org/obo/UBERON_\')]/@rdf:about',
-
 
 const efo_template = {
   'id' : './@rdf:about',
@@ -63,22 +59,31 @@ const stream_reader = function() {
     });
   }));
   parsers_finished.then( () => result.end() );
-
   return (new StreamCombiner(input,result));
 };
 
-fs.createReadStream('/tmp/efo.owl').pipe(stream_reader()).pipe(new PassThrough({objectMode: true})).on('data', datas => {
-  datas = datas.filter( dat => {
-    if (dat.bearer_of && ! dat.derives_from && ! dat.located_in && ! dat.located_in_2 ) {
-      return true;
+const read_efo_data = function(input) {
+  let instream = input;
+  if (typeof input === 'string') {
+    instream = fs.createReadStream(input);
+  }
+  let efo_stream = instream.pipe(stream_reader()).pipe(new PassThrough({objectMode: true}));
+  return efo_stream;
+};
+
+const read_efo_table = function(input) {
+  let efo_cache = {};
+  let efo_stream = read_efo_data(input);
+  efo_stream.on('data', datas => datas.forEach( efo => efo_cache[efo.id] = efo ));
+  return new Promise( resolve => efo_stream.on('end', () => resolve(efo_cache) ) );
+};
+
+read_efo_table('/tmp/efo.owl').then( cache => {
+  let efo_ids = Object.keys(cache).filter( id => id.indexOf('EFO') >= 0);
+  efo_ids.forEach( id => {
+    let efo = cache[id];
+    if ( efo.bearer_of && ! (efo.derives_from || efo.located_in || efo.located_in_2 ) ) {
+      console.log(efo.label, efo.bearer_of, cache[efo.bearer_of]);
     }
   });
-  console.dir(datas);
 });
-
-
-// cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://www.obofoundry.org/ro/ro.owl#derives_from']/rdfs:label/text()"
-
-// cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://purl.org/obo/owl/OBO_REL#bearer_of']/rdfs:label/text()"
-
-// cat /tmp/efo.owl | node_modules/.bin/xpath-stream --namespace=owl:http://www.w3.org/2002/07/owl# --namespace=rdfs:http://www.w3.org/2000/01/rdf-schema# --namespace=rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#  "//owl:Class[rdfs:subClassOf/owl:Restriction/owl:onProperty/@rdf:resource= 'http://www.ebi.ac.uk/efo/EFO_0000784']/rdfs:label/text()"
