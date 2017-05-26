@@ -31,6 +31,7 @@ const restrictions = [
 
 const efo_template = {
   'id' : './@rdf:about',
+  'parent' : './rdfs:subClassOf[@rdf:resource]/@rdf:resource',
   'label' : './rdfs:label/text()',
   'derives_from' : './rdfs:subClassOf/owl:Restriction[ owl:onProperty/@rdf:resource = \'http://www.obofoundry.org/ro/ro.owl#derives_from\' ]//rdf:Description/@rdf:about',
   'bearer_of' : './rdfs:subClassOf/owl:Restriction[ owl:onProperty/@rdf:resource = \'http://purl.org/obo/owl/OBO_REL#bearer_of\' ]/owl:someValuesFrom/@rdf:resource',
@@ -78,12 +79,30 @@ const read_efo_table = function(input) {
   return new Promise( resolve => efo_stream.on('end', () => resolve(efo_cache) ) );
 };
 
+const find_parent = function(input,cache) {
+  if ( ! input ) {
+    return;
+  }
+  let current = cache[input];
+  if (current && ! (current.derives_from || current.located_in || current.located_in_2 )) {
+    return find_parent(current.parent);
+  }
+  return current.id;
+};
+
 read_efo_table('/tmp/efo.owl').then( cache => {
   let efo_ids = Object.keys(cache).filter( id => id.indexOf('EFO') >= 0);
   efo_ids.forEach( id => {
     let efo = cache[id];
+    let target_efo = efo;
     if ( efo.bearer_of && ! (efo.derives_from || efo.located_in || efo.located_in_2 ) ) {
-      console.log(efo.label, efo.bearer_of, cache[efo.bearer_of]);
+      if ( ! cache[efo.bearer_of] ) {
+        // Maybe ignore this for the moment.. few entries like this
+        // console.log(efo.label, efo.bearer_of, cache[efo.bearer_of]);
+      } else {
+        target_efo = cache[efo.bearer_of];
+      }
     }
+    console.log(efo.label,target_efo.derives_from || target_efo.located_in || target_efo.located_in_2);
   });
 });
