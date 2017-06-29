@@ -1,6 +1,7 @@
 'use strict';
 
 const xpath = require('xpath-stream');
+const zlib = require('zlib');
 
 const util = require('util');
 
@@ -69,7 +70,7 @@ const stream_reader = function() {
 const read_efo_data = function(input) {
   let instream = input;
   if (typeof input === 'string') {
-    instream = fs.createReadStream(input);
+    instream = fs.createReadStream(input).pipe(zlib.createGunzip());
   }
   let efo_stream = instream.pipe(stream_reader()).pipe(new PassThrough({objectMode: true}));
   return efo_stream;
@@ -97,7 +98,7 @@ const find_parent = function(input,cache) {
   return current.id;
 };
 
-let table_promise = read_efo_table('/tmp/efo-ebi.owl');
+let table_promise = read_efo_table('efo.owl.gz');
 
 const convert_id = function(cache,id) {
   let efo = cache[id];
