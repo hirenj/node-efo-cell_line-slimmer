@@ -4,7 +4,8 @@
   "description": "",
   "main": "extractor.js",
   "dependencies": {
-    "xpath-stream": "0.0.9"
+    "xpath-stream": "0.0.9",
+    "node-uberon-mappings" : "hirenj/node-uberon-mappings"
   },
   "devDependencies": {},
   "scripts": {
