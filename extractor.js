@@ -4,6 +4,7 @@ const xpath = require('xpath-stream');
 const zlib = require('zlib');
 
 const util = require('util');
+const path = require('path');
 
 const PassThrough = require('stream').PassThrough;
 
@@ -98,11 +99,19 @@ const find_parent = function(input,cache) {
   return current.id;
 };
 
-let table_promise = read_efo_table('efo.owl.gz');
+console.error("Reading EFO table");
+
+let table_promise = Promise.resolve()
+                    .then( () => read_efo_table(path.join(__dirname,'efo.owl.gz')) )
+                    .then( cache => { console.error("Finished reading EFO table"); return cache; });
 
 const convert_id = function(cache,id) {
   let efo = cache[id];
   let target_efo = efo;
+  if ( ! efo ) {
+    console.log("Missing EFO id for ",id);
+    return Promise.resolve({ unmapped: true, efo_label: "", efo_id: id });
+  }
   if ( efo.bearer_of && ! (efo.derives_from || efo.located_in || efo.located_in_2 ) ) {
     if ( ! cache[efo.bearer_of] ) {
       // Maybe ignore this for the moment.. few entries like this
