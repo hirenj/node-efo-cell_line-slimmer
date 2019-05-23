@@ -5,6 +5,7 @@ const zlib = require('zlib');
 
 const util = require('util');
 const path = require('path');
+const fs = require('fs');
 
 const PassThrough = require('stream').PassThrough;
 
@@ -23,8 +24,6 @@ util.inherits(StreamCombiner, PassThrough);
 StreamCombiner.prototype.pipe = function(dest, options) {
   return this.output.pipe(dest, options);
 };
-
-const fs = require('fs');
 
 const restrictions = [
   'http://www.obofoundry.org/ro/ro.owl#derives_from',
@@ -101,8 +100,46 @@ const find_parent = function(input,cache) {
 
 console.error("Reading EFO table");
 
+const read_cache_file = () => {
+  return new Promise( (resolve, reject) => {
+    zlib.unzip( fs.readFileSync(path.join(__dirname,'efo_parsed.json.gz')), (err,unzipped) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(JSON.parse(unzipped));
+    });
+  });
+};
+
+const write_cache_file = (cache) => {
+  return new Promise( (resolve, reject) => {
+    zlib.gzip( new Buffer.from(JSON.stringify(cache)), (err,zipped) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      fs.writeFileSync(path.join(__dirname,'efo_parsed.json.gz'), zipped);
+      resolve(cache);
+    });
+  });
+}
+
+let table_reader = () => {
+  try {
+    if (fs.existsSync(path.join(__dirname,'efo_parsed.json.gz'))) {
+      return read_cache_file();
+    }
+  } catch(err) {
+    console.log('Reading EFO table from XML');
+  }
+  return read_efo_table(path.join(__dirname,'efo.owl.gz'))
+  .then( write_cache_file );
+};
+
+
 let table_promise = Promise.resolve()
-                    .then( () => read_efo_table(path.join(__dirname,'efo.owl.gz')) )
+                    .then( table_reader )
                     .then( cache => { console.error("Finished reading EFO table"); return cache; });
 
 const convert_id = function(cache,id) {
